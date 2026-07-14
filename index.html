@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+  ScorePlease — Free Cricket Scorer
+  © ScorePlease. All rights reserved.
+  Unauthorized copying or redistribution of this file, in whole or in part, is not permitted.
+-->
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
@@ -6,6 +11,7 @@
 <title>ScorePlease — Free Cricket Scorer</title>
 <meta name="description" content="ScorePlease is a free, offline-friendly cricket scoring app. No login, no backend, no cost, ever — runs entirely in your browser.">
 <meta name="theme-color" content="#0B2B21">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob:; connect-src 'self'; base-uri 'self'; form-action 'self';">
 <meta property="og:title" content="ScorePlease — Free Cricket Scorer">
 <meta property="og:description" content="Score any cricket match in a few taps. Free forever, no login, no backend — runs entirely in your browser.">
 <meta property="og:type" content="website">
@@ -40,6 +46,8 @@
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;}
+body{-webkit-user-select:none; -moz-user-select:none; user-select:none;}
+input, textarea{-webkit-user-select:text; -moz-user-select:text; user-select:text;}
 body{
   background:
     radial-gradient(ellipse 900px 500px at 15% -8%, var(--glow1), transparent 60%),
@@ -113,6 +121,7 @@ a{color:inherit;}
 }
 .sb-top{display:flex; align-items:baseline; justify-content:space-between;}
 .sb-team{font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); font-weight:700;}
+.sb-toss{font-size:11px; color:var(--gold); font-weight:600; margin-top:2px;}
 .sb-target{font-size:12px; color:var(--gold); font-weight:700; font-family:'JetBrains Mono',monospace;}
 .sb-score{display:flex; align-items:baseline; gap:14px; margin:2px 0 4px;}
 .sb-score .runs{font-size:68px; line-height:1;}
@@ -160,6 +169,46 @@ a{color:inherit;}
 .action-btn{padding:13px 4px; font-size:12.5px; border-radius:12px; border:1px solid var(--line); background:var(--bg-soft); color:var(--ink);}
 .action-btn.wicket{background:linear-gradient(135deg,var(--red),#8E2530); color:#fff; border-color:transparent; box-shadow:0 8px 18px rgba(193,65,79,.28);}
 .action-btn.finish{background:linear-gradient(135deg,var(--green),var(--green-deep)); color:#fff; border-color:transparent; box-shadow:0 8px 18px rgba(46,142,99,.25);}
+
+/* ---------------- toss / coin flip ---------------- */
+.toss-box{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:16px 14px; margin-bottom:14px; position:relative; overflow:hidden;}
+.toss-box::before{content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 0%, rgba(212,175,55,.10), transparent 65%); pointer-events:none;}
+.coin-stage{display:flex; align-items:center; justify-content:center; padding:14px 0 10px; perspective:900px; position:relative;}
+.coin-stage::after{content:""; position:absolute; bottom:6px; left:50%; width:60px; height:12px; transform:translateX(-50%); border-radius:50%;
+  background:radial-gradient(ellipse, rgba(0,0,0,.35), transparent 70%); filter:blur(2px);}
+.coin-bounce{width:108px; height:108px; box-shadow:0 14px 22px rgba(0,0,0,.4); border-radius:50%;}
+.coin-bounce.bouncing{animation: coinBounce 3s cubic-bezier(.28,.6,.22,1) 1;}
+@keyframes coinBounce{
+  0%{transform:translateY(0);} 12%{transform:translateY(-56px);} 26%{transform:translateY(-8px);}
+  38%{transform:translateY(-40px);} 52%{transform:translateY(-6px);} 65%{transform:translateY(-24px);}
+  78%{transform:translateY(-3px);} 90%{transform:translateY(-10px);} 100%{transform:translateY(0);}
+}
+/* IMPORTANT: no `filter` property on .coin-3d or its rotating children.
+   Applying filter (drop-shadow, blur, etc.) directly to an element that
+   also has transform-style:preserve-3d forces many browsers to flatten
+   it into a 2D compositing layer, which breaks backface-visibility —
+   this was the actual cause of the coin appearing to vanish on Tails.
+   The shadow now lives on .coin-bounce (a plain, non-3D wrapper) instead. */
+.coin-3d{width:100%; height:100%; position:relative; transform-style:preserve-3d; transform:rotateY(0deg);
+  transition:transform 3s cubic-bezier(.16,.72,.18,1);}
+.coin-face{position:absolute; inset:0; border-radius:50%; backface-visibility:hidden; -webkit-backface-visibility:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  font-family:'Bebas Neue',sans-serif; letter-spacing:.03em; border:3px solid rgba(0,0,0,.18); box-shadow:inset 0 0 0 5px rgba(255,255,255,.10), inset 0 -10px 18px rgba(0,0,0,.18), inset 0 8px 14px rgba(255,255,255,.18);
+  transition:opacity .12s linear;}
+.coin-face.force-hide{opacity:0 !important; pointer-events:none;}
+.coin-face::after{content:""; position:absolute; inset:5px; border-radius:50%; border:1.5px dashed rgba(0,0,0,.18); pointer-events:none;}
+.coin-face .coin-icon{font-size:30px; line-height:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.2));}
+.coin-face .coin-label{font-size:15px; letter-spacing:.14em;}
+.coin-face.front{background:radial-gradient(circle at 32% 26%, #FBEFC0, var(--gold) 58%, #8A6C14 100%); color:#3B2E05;}
+.coin-face.back{background:radial-gradient(circle at 32% 26%, #FFE9CE, var(--orange) 58%, #7A3512 100%); color:#3B1704; transform:rotateY(180deg);}
+.toss-result{text-align:center; font-weight:700; min-height:22px; margin:10px 0 10px; color:var(--gold); font-family:'Bebas Neue',sans-serif; letter-spacing:.04em; font-size:22px;}
+.toss-sub{text-align:center; font-size:12px; color:var(--ink-dim); margin:-6px 0 10px;}
+.flip-coin-btn{display:flex; align-items:center; justify-content:center; gap:8px; font-size:16px;}
+.flip-coin-btn span{font-size:20px; line-height:1;}
+.openers-label{font-size:12px; color:var(--ink-dim); margin:0 2px 8px; font-weight:600;}
+@media (prefers-reduced-motion: reduce){
+  .coin-bounce.bouncing{animation:none;}
+  .coin-3d{transition-duration:.4s;}
+}
 
 .celebrate{position:fixed; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center; z-index:50; overflow:hidden;}
 .celebrate-inner{display:flex; flex-direction:column; align-items:center; opacity:0;}
@@ -219,6 +268,8 @@ a{color:inherit;}
   .sb-score .runs{font-size:78px;}
 }
 ::selection{background:var(--gold); color:#1B2620;}
+.site-footer{max-width:640px; margin:20px auto 0; padding:14px 16px 26px; text-align:center; font-size:11.5px; color:var(--ink-dim); line-height:1.6;}
+.site-footer .dot{margin:0 5px; opacity:.5;}
 .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--card); border:1px solid var(--line); padding:11px 18px; border-radius:30px; font-size:13.5px; font-weight:600; box-shadow:var(--shadow), 0 0 0 1px rgba(212,175,55,.12); opacity:0; transition:opacity .25s ease, transform .25s ease; z-index:200; pointer-events:none;}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
 @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
@@ -229,6 +280,7 @@ a{color:inherit;}
 <div class="topbar">
   <div class="brand"><div class="ball"></div><span>ScorePlease</span></div>
   <div class="topbar-actions">
+    <button class="iconbtn" id="historyBtn" title="Match history">📜</button>
     <button class="iconbtn" id="soundToggle" title="Toggle sound">🔊</button>
     <button class="iconbtn" id="celebrateToggle" title="Toggle celebrations">🎉</button>
     <button class="iconbtn" id="themeToggle" title="Toggle theme">◐</button>
@@ -237,6 +289,14 @@ a{color:inherit;}
 </div>
 
 <div class="wrap" id="app"></div>
+
+<footer class="site-footer">
+  <span>© <span id="footerYear"></span> ScorePlease</span>
+  <span class="dot">·</span>
+  <span>All rights reserved. Code may not be copied or redistributed without permission.</span>
+  <span class="dot">·</span>
+  <span>Contact / feedback: <a href="mailto:sanketdeveloperr@gmail.com">sanketdeveloperr@gmail.com</a></span>
+</footer>
 
 <div class="celebrate" id="celebrate"><div class="celebrate-inner" id="celebrateInner"><span class="celebrate-emoji" id="celebrateEmoji"></span><span class="celebrate-text" id="celebrateText"></span></div></div>
 <div class="toast" id="toast"></div>
@@ -248,10 +308,39 @@ a{color:inherit;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
+/*!
+ * ScorePlease — Free Cricket Scorer
+ * © ScorePlease. All rights reserved.
+ * This source is provided for use of the ScorePlease app only.
+ * Copying, redistributing, or repackaging this file (or substantial
+ * portions of it) without permission is not allowed.
+ */
 (function(){
 "use strict";
 
+/* ---------------- copy / tamper deterrents ----------------
+   Note: none of this can make client-side code truly uncopyable —
+   anyone with browser devtools can always view page source. These
+   measures just raise friction against casual copying (right-click
+   "save as", drag-copy, quick devtools peeking) and are not a
+   substitute for a license or legal protection. */
+document.addEventListener("contextmenu", e=>{
+  if(e.target.closest("input, textarea")) return;
+  e.preventDefault();
+});
+document.addEventListener("dragstart", e=>{ e.preventDefault(); });
+document.addEventListener("keydown", e=>{
+  const k = e.key.toLowerCase();
+  const blockCombo =
+    e.key === "F12" ||
+    ((e.ctrlKey || e.metaKey) && e.shiftKey && ["i","j","c"].includes(k)) ||
+    ((e.ctrlKey || e.metaKey) && k === "u") ||
+    ((e.ctrlKey || e.metaKey) && k === "s");
+  if(blockCombo) e.preventDefault();
+}, true);
+
 const STORAGE_KEY = "crictap_match_v1";
+const HISTORY_KEY = "crictap_history_v1";
 const THEME_KEY = "crictap_theme";
 const CELEBRATE_KEY = "crictap_celebrate";
 const SOUND_KEY = "crictap_sound";
@@ -375,7 +464,12 @@ const SOUNDS = {
     tone(ctx,t,{freq:180,glideTo:70,dur:.4,type:"sawtooth",gain:.24});
     noiseBurst(ctx,t,{dur:.2,gain:.2,filterFreq:1200,delay:.02});
   },
-  undo:   ctx => { const t=ctx.currentTime; tone(ctx,t,{freq:500,glideTo:320,dur:.15,type:"sine",gain:.16}); }
+  undo:   ctx => { const t=ctx.currentTime; tone(ctx,t,{freq:500,glideTo:320,dur:.15,type:"sine",gain:.16}); },
+  coinland: ctx => {
+    const t=ctx.currentTime;
+    tone(ctx,t,{freq:900,dur:.06,type:"triangle",gain:.15});
+    tone(ctx,t,{freq:1200,dur:.08,type:"triangle",gain:.12,delay:.05});
+  }
 };
 
 function playSound(type){
@@ -410,6 +504,39 @@ function currentInnings(){ return state.innings[state.inningsNum-1]; }
 
 function save(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  upsertMatchHistory();
+}
+
+/* ---------------- persistent match history (survives "New match") ---------------- */
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }catch(e){ return []; }
+}
+function upsertMatchHistory(){
+  if(!state || !state.matchId) return;
+  try{
+    const hist = loadHistory();
+    const idx = hist.findIndex(m=>m.matchId===state.matchId);
+    const record = {
+      matchId: state.matchId,
+      title: state.meta.title || (state.meta.teamA+" vs "+state.meta.teamB),
+      teamA: state.meta.teamA, teamB: state.meta.teamB,
+      date: (idx>=0 ? hist[idx].date : new Date().toISOString()),
+      updated: new Date().toISOString(),
+      finished: state.innings.length===2 && state.innings[1].finished,
+      innings: state.innings.map(ii=>({
+        battingTeam: ii.battingTeam, bowlingTeam: ii.bowlingTeam,
+        score: ii.score, wickets: ii.wickets, legalBalls: ii.legalBalls,
+        result: ii.result || null,
+        batting: ii.outBatsmen.concat([ii.striker, ii.nonStriker]).map(b=>({
+          name: b.name, runs: b.runs, balls: b.balls, fours: b.fours, sixes: b.sixes,
+          out: ii.outBatsmen.indexOf(b) !== -1
+        }))
+      }))
+    };
+    if(idx>=0) hist[idx] = record; else hist.unshift(record);
+    if(hist.length>50) hist.length = 50;
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+  }catch(e){}
 }
 function pushUndo(){ undoStack.push(clone(state)); if(undoStack.length>60) undoStack.shift(); }
 function undo(){
@@ -431,8 +558,9 @@ function crr(inn){
 function rotateStrike(inn){
   const t = inn.striker; inn.striker = inn.nonStriker; inn.nonStriker = t;
 }
-function pushBallEvent(inn, code, cls){
-  inn.overs[inn.overs.length-1].push({code, cls});
+function pushBallEvent(inn, code, cls, batsman, runsValue){
+  const overNum = inn.overs.length;
+  inn.overs[inn.overs.length-1].push({code, cls, batsman: batsman||null, runs: runsValue||0, over: overNum});
 }
 function maybeEndOver(inn){
   if(inn.legalBalls>0 && inn.legalBalls%6===0 && !inn.finished){
@@ -457,7 +585,7 @@ function scoreRun(n){
   if(n===4) inn.striker.fours += 1;
   if(n===6) inn.striker.sixes += 1;
   inn.legalBalls += 1;
-  pushBallEvent(inn, n===0?"•":String(n), n===4?"four":n===6?"six":"");
+  pushBallEvent(inn, n===0?"•":String(n), n===4?"four":n===6?"six":"", inn.striker.name, n);
   if(n%2===1) rotateStrike(inn);
   maybeEndOver(inn);
   checkInningsEnd(inn);
@@ -477,7 +605,7 @@ function scoreWide(extra){
   const total = 1 + extra;
   inn.score += total;
   inn.extras.wide += total;
-  pushBallEvent(inn, "Wd"+(extra?"+"+extra:""), "extra");
+  pushBallEvent(inn, "Wd"+(extra?"+"+extra:""), "extra", inn.striker.name, total);
   if(extra%2===1) rotateStrike(inn);
   checkInningsEnd(inn);
   playSound("wide");
@@ -495,7 +623,7 @@ function scoreNoBall(batRuns){
     if(batRuns===4) inn.striker.fours += 1;
     if(batRuns===6) inn.striker.sixes += 1;
   }
-  pushBallEvent(inn, "Nb"+(batRuns?"+"+batRuns:""), "extra");
+  pushBallEvent(inn, "Nb"+(batRuns?"+"+batRuns:""), "extra", inn.striker.name, 1+batRuns);
   if(batRuns%2===1) rotateStrike(inn);
   checkInningsEnd(inn);
   if(batRuns===6){ playSound("six"); celebrate("six"); }
@@ -511,7 +639,7 @@ function scoreByeLegBye(kind, runs){
   inn.score += runs;
   inn.extras[kind] += runs;
   inn.legalBalls += 1;
-  pushBallEvent(inn, (kind==="bye"?"B":"LB")+runs, "extra");
+  pushBallEvent(inn, (kind==="bye"?"B":"LB")+runs, "extra", inn.striker.name, runs);
   if(runs%2===1) rotateStrike(inn);
   maybeEndOver(inn);
   checkInningsEnd(inn);
@@ -527,7 +655,7 @@ function scoreWicket(who, newName){
   inn.legalBalls += 1;
   const out = who==="striker" ? inn.striker : inn.nonStriker;
   inn.outBatsmen.push({...out, howOut:"out"});
-  pushBallEvent(inn, "W", "wicket");
+  pushBallEvent(inn, "W", "wicket", out.name, 0);
   const nb = fresh(newName || ("Batsman "+(inn.outBatsmen.length+2)));
   if(who==="striker") inn.striker = nb; else inn.nonStriker = nb;
   maybeEndOver(inn);
@@ -643,6 +771,7 @@ function onNextInnings(){
 function scoreSummaryText(){
   const inn = currentInnings();
   let txt = `${state.meta.title || (state.meta.teamA+" vs "+state.meta.teamB)}\n`;
+  if(state.meta.toss) txt += `Toss: ${state.meta.toss.winner} won, chose to ${state.meta.toss.decision}\n`;
   state.innings.forEach((ii,idx)=>{
     txt += `${ii.battingTeam}: ${ii.score}/${ii.wickets} (${oversStr(ii.legalBalls)} ov)${ii.result?"  — "+ii.result:""}\n`;
   });
@@ -707,6 +836,71 @@ function renderSetup(){
   const striker = el("input",{type:"text", placeholder:"Opening striker"});
   const nonStriker = el("input",{type:"text", placeholder:"Opening non-striker"});
   const title = el("input",{type:"text", placeholder:"Optional match title"});
+  const openersLabel = el("div",{class:"openers-label"}, "Who's opening? (Team A bats first)");
+
+  // --- coin flip elements (Heads / Tails only — a fun standalone flip,
+  // not tied to team names or match setup) ---
+  const coin3d = el("div",{class:"coin-3d"},
+    el("div",{class:"coin-face front"}, el("span",{class:"coin-icon"},"🏏"), el("span",{class:"coin-label"},"HEADS")),
+    el("div",{class:"coin-face back"}, el("span",{class:"coin-icon"},"🛡️"), el("span",{class:"coin-label"},"TAILS"))
+  );
+  const frontFace = coin3d.children[0];
+  const backFace = coin3d.children[1];
+  const coinBounce = el("div",{class:"coin-bounce"}, coin3d);
+  const tossResultText = el("div",{class:"toss-result"}, "");
+
+  let flipBtn;
+
+  flipBtn = el("button",{class:"btn btn-primary flip-coin-btn", style:"width:100%;"},
+    el("span",{}, "🪙"), " Flip Coin"
+  );
+  flipBtn.addEventListener("click", ()=>{
+    if(soundOn) getAudioCtx();
+    flipBtn.disabled = true;
+    tossResultText.textContent = "";
+    frontFace.classList.remove("force-hide");
+    backFace.classList.remove("force-hide");
+
+    // Reset to a clean, small rotation before every spin. Letting the
+    // rotation value keep accumulating across repeated flips (as before)
+    // could eventually push it into the thousands of degrees, and some
+    // mobile browsers render backface-visibility incorrectly at large
+    // 3D rotation values — which is what made the coin vanish entirely
+    // on Tails. Starting fresh each time keeps the value small and safe.
+    coin3d.style.transition = "none";
+    coin3d.style.transform = "rotateY(0deg)";
+    coin3d.classList.remove("spinning");
+    void coin3d.offsetWidth;
+
+    // fair 50/50 result, decided first
+    const landedHeads = Math.random() < 0.5;
+    // 5 full spins (1800deg) lands back on the front face (Heads);
+    // 5.5 spins (1980deg) lands on the back face (Tails). Both are fixed,
+    // small, exact values, so the landing face is always correct.
+    const targetRotation = landedHeads ? 1800 : 1980;
+
+    coin3d.style.transition = "transform 3s cubic-bezier(.16,.72,.18,1)";
+    playSound("undo");
+    coin3d.classList.add("spinning");
+    coin3d.style.transform = `rotateY(${targetRotation}deg)`;
+    coinBounce.classList.remove("bouncing");
+    void coinBounce.offsetWidth;
+    coinBounce.classList.add("bouncing");
+    setTimeout(()=>{
+      coin3d.classList.remove("spinning");
+      // Belt-and-braces: force-hide the losing face explicitly so it can
+      // never render (or fail to render) incorrectly.
+      frontFace.classList.toggle("force-hide", !landedHeads);
+      backFace.classList.toggle("force-hide", landedHeads);
+      tossResultText.textContent = landedHeads ? "🏏 It's Heads!" : "🛡️ It's Tails!";
+      playSound("coinland");
+      playSound("wicket");
+      flipBtn.disabled = false;
+      flipBtn.innerHTML = "";
+      flipBtn.appendChild(el("span",{}, "🪙"));
+      flipBtn.appendChild(document.createTextNode(" Flip Again"));
+    }, 3050);
+  });
 
   const startBtn = el("button",{class:"btn btn-primary", onclick:()=>{
     if(!teamA.value.trim()||!teamB.value.trim()||!striker.value.trim()||!nonStriker.value.trim()){
@@ -716,14 +910,18 @@ function renderSetup(){
     const ov = overs.value ? parseInt(overs.value,10) : null;
     const playersPerTeam = totalPlayers.value ? Math.max(2, parseInt(totalPlayers.value,10)) : 11;
     const maxW = playersPerTeam - 1;
+    const battingFirst = teamA.value.trim();
+    const bowlingFirst = teamB.value.trim();
     state = {
+      matchId: Date.now().toString(36)+Math.random().toString(36).slice(2,8),
       meta:{
         title: title.value.trim(),
         teamA: teamA.value.trim(), teamB: teamB.value.trim(),
-        oversLimit: ov, totalPlayers: playersPerTeam
+        oversLimit: ov, totalPlayers: playersPerTeam,
+        toss: null
       },
       inningsNum: 1,
-      innings: [ newInnings(teamA.value.trim(), teamB.value.trim(), striker.value.trim(), nonStriker.value.trim(), ov, null, maxW) ]
+      innings: [ newInnings(battingFirst, bowlingFirst, striker.value.trim(), nonStriker.value.trim(), ov, null, maxW) ]
     };
     undoStack = [];
     save(); render();
@@ -743,6 +941,13 @@ function renderSetup(){
       el("div",{class:"field"}, el("label",{},"Overs (optional)"), overs),
       el("div",{class:"field"}, el("label",{},"Players per team (optional)"), totalPlayers)
     ),
+    el("div",{class:"section-label"}, "Coin Flip (just for fun)"),
+    el("div",{class:"toss-box"},
+      el("div",{class:"coin-stage"}, coinBounce),
+      tossResultText,
+      flipBtn
+    ),
+    openersLabel,
     el("div",{class:"row2"},
       el("div",{class:"field"}, el("label",{},"Striker"), striker),
       el("div",{class:"field"}, el("label",{},"Non-striker"), nonStriker)
@@ -758,14 +963,115 @@ function ballChip(ev){
   return el("div",{class:"ball-chip "+(ev.cls||"")}, ev.code);
 }
 
+/* ---------------- overs & player history modals ---------------- */
+function openOversHistory(inn){
+  const body = el("div",{style:"max-height:60vh;overflow-y:auto;"});
+  const bowledOvers = inn.overs.filter(o=>o.length);
+  if(!bowledOvers.length){
+    body.appendChild(el("p",{style:"color:var(--ink-dim);font-size:13px;"}, "No balls bowled yet."));
+  } else {
+    inn.overs.forEach((over, idx)=>{
+      if(!over.length) return;
+      const runsInOver = over.reduce((s,e)=>s+(e.runs||0),0);
+      const wktsInOver = over.filter(e=>e.cls==="wicket").length;
+      body.appendChild(el("div",{style:"margin-bottom:14px;"},
+        el("div",{style:"font-size:12px;color:var(--ink-dim);margin-bottom:6px;font-weight:700;"},
+          `Over ${idx+1} — ${runsInOver} run${runsInOver===1?"":"s"}` + (wktsInOver? `, ${wktsInOver} wkt${wktsInOver===1?"":"s"}`:"")),
+        el("div",{class:"over-track", style:"margin-top:0;"}, over.map(ballChip))
+      ));
+    });
+  }
+  openModal(el("div",{}, el("h3",{}, "Overs History — "+inn.battingTeam), body));
+}
+
+function findPlayerStats(inn, name){
+  if(inn.striker.name===name) return inn.striker;
+  if(inn.nonStriker.name===name) return inn.nonStriker;
+  return inn.outBatsmen.find(b=>b.name===name) || null;
+}
+
+function openPlayerHistory(inn, name){
+  const stats = findPlayerStats(inn, name);
+  const events = [];
+  inn.overs.forEach((over, idx)=>{
+    over.forEach(e=>{ if(e.batsman===name) events.push(Object.assign({}, e, {overNum: idx+1})); });
+  });
+  const body = el("div",{style:"max-height:60vh;overflow-y:auto;"});
+  if(stats){
+    const sr = stats.balls ? ((stats.runs/stats.balls)*100).toFixed(1) : "0.0";
+    body.appendChild(el("div",{class:"summary-grid"},
+      summaryItem("Runs", stats.runs),
+      summaryItem("Balls", stats.balls),
+      summaryItem("4s / 6s", stats.fours+" / "+stats.sixes),
+      summaryItem("Strike rate", sr)
+    ));
+  }
+  body.appendChild(el("div",{class:"section-label"}, "Ball by ball"));
+  if(!events.length){
+    body.appendChild(el("p",{style:"color:var(--ink-dim);font-size:13px;"}, "No deliveries recorded yet."));
+  } else {
+    let curOver = null, rowTrack = null;
+    events.forEach(e=>{
+      if(e.overNum !== curOver){
+        curOver = e.overNum;
+        body.appendChild(el("div",{style:"font-size:11.5px;color:var(--ink-dim);font-weight:700;margin:10px 0 4px;"}, "Over "+curOver));
+        rowTrack = el("div",{class:"over-track", style:"margin-top:0;"});
+        body.appendChild(rowTrack);
+      }
+      rowTrack.appendChild(ballChip(e));
+    });
+  }
+  openModal(el("div",{}, el("h3",{}, name), body));
+}
+
+/* ---------------- saved match history (list of past & in-progress matches) ---------------- */
+function openMatchHistoryList(){
+  const hist = loadHistory();
+  const body = el("div",{style:"max-height:65vh;overflow-y:auto;"});
+  if(!hist.length){
+    body.appendChild(el("p",{style:"color:var(--ink-dim);font-size:13px;"}, "No saved matches yet. Play a match and it'll be saved here automatically."));
+  } else {
+    hist.forEach(m=>{
+      const scoreLine = m.innings.map(ii=>`${ii.battingTeam} ${ii.score}/${ii.wickets} (${oversStr(ii.legalBalls)})`).join("  •  ");
+      body.appendChild(el("div",{class:"summary-item", style:"cursor:pointer;margin-bottom:8px;", onclick:()=>openMatchHistoryDetail(m)},
+        el("div",{class:"k"}, new Date(m.updated).toLocaleString()),
+        el("div",{class:"v", style:"font-size:14px;"}, m.title),
+        el("div",{style:"font-size:12px;color:var(--ink-dim);margin-top:4px;"}, scoreLine + (m.finished? "" : "  (in progress)"))
+      ));
+    });
+  }
+  openModal(el("div",{}, el("h3",{}, "Match History"), body));
+}
+
+function openMatchHistoryDetail(m){
+  const body = el("div",{style:"max-height:65vh;overflow-y:auto;"});
+  m.innings.forEach(ii=>{
+    body.appendChild(el("div",{class:"section-label"}, ii.battingTeam+" innings"));
+    body.appendChild(el("p",{style:"margin:2px 0 8px;font-family:'JetBrains Mono',monospace;"},
+      `${ii.score}/${ii.wickets} (${oversStr(ii.legalBalls)} ov)` + (ii.result? " — "+ii.result:"")));
+    (ii.batting||[]).forEach(b=>{
+      const sr = b.balls ? ((b.runs/b.balls)*100).toFixed(1) : "0.0";
+      body.appendChild(el("div",{style:"display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line);"},
+        el("span",{}, b.name+(b.out?"":" *")),
+        el("span",{class:"mono"}, `${b.runs} (${b.balls}) SR ${sr}`)
+      ));
+    });
+  });
+  openModal(el("div",{}, el("h3",{}, m.title), body));
+}
+
 function renderScore(){
   const app = $("#app"); app.innerHTML = "";
   const inn = currentInnings();
   const target = inn.target;
 
-  const scoreboard = el("div",{class:"scoreboard"},
+  const tossInfo = state.meta.toss;
+  const scoreboard = el("div",{class:"scoreboard", style:"cursor:pointer;", title:"Tap for full overs history", onclick:()=>openOversHistory(inn)},
     el("div",{class:"sb-top"},
-      el("div",{class:"sb-team"}, inn.battingTeam),
+      el("div",{},
+        el("div",{class:"sb-team"}, inn.battingTeam),
+        tossInfo ? el("div",{class:"sb-toss"}, `🪙 ${tossInfo.winner} chose to ${tossInfo.decision}`) : null
+      ),
       target!=null ? el("div",{class:"sb-target"}, `NEED ${Math.max(target-inn.score,0)} FROM ${inn.oversLimit? (inn.oversLimit*6 - inn.legalBalls):"—"} BALLS`) : el("div",{})
     ),
     el("div",{class:"sb-score"},
@@ -777,12 +1083,13 @@ function renderScore(){
       el("span",{}, "CRR ", el("b",{},crr(inn))),
       target!=null ? el("span",{}, "Target ", el("b",{},String(target))) : el("span",{})
     ),
-    el("div",{class:"over-track"}, (inn.overs[inn.overs.length-1]||[]).map(ballChip))
+    el("div",{class:"over-track"}, (inn.overs[inn.overs.length-1]||[]).map(ballChip)),
+    el("div",{style:"font-size:11px;color:var(--ink-dim);margin-top:10px;"}, "Tap card for full overs history")
   );
 
   const ledger = el("div",{class:"ledger"},
-    battingCard(inn.striker, true),
-    battingCard(inn.nonStriker, false)
+    battingCard(inn.striker, true, inn),
+    battingCard(inn.nonStriker, false, inn)
   );
 
   let body;
@@ -808,9 +1115,9 @@ function renderScore(){
   app.appendChild(footer);
 }
 
-function battingCard(b, on){
+function battingCard(b, on, inn){
   const sr = b.balls ? ((b.runs/b.balls)*100).toFixed(1) : "0.0";
-  return el("div",{class:"bat-card"+(on?" on":"")},
+  return el("div",{class:"bat-card"+(on?" on":""), style:"cursor:pointer;", title:"Tap for "+b.name+"'s history", onclick:()=>openPlayerHistory(inn, b.name)},
     el("div",{class:"nm"}, b.name),
     el("div",{class:"fig"}, String(b.runs), el("span",{}, " ("+b.balls+")")),
     el("div",{class:"sub"},
@@ -894,6 +1201,15 @@ function toggleTheme(){
   applyTheme(cur==="dark" ? "light" : "dark");
 }
 
+/* ---------------- basic security notices ---------------- */
+(function consoleWarning(){
+  const warn = "font-size:34px; font-weight:bold; color:#C1414F;";
+  const info = "font-size:15px; color:#93A99C;";
+  console.log("%cSTOP", warn);
+  console.log("%cThis is a browser feature meant for developers. If someone told you to paste something here to \"unlock\", \"score more runs\", or \"get free coins\", it is a scam and could let them take over your accounts. Do not paste anything you don't fully understand.", info);
+})();
+document.getElementById("footerYear").textContent = new Date().getFullYear();
+
 /* ---------------- render dispatcher ---------------- */
 function render(){
   if(!state){ renderSetup(); return; }
@@ -902,6 +1218,7 @@ function render(){
 
 /* ---------------- global controls ---------------- */
 $("#themeToggle").addEventListener("click", toggleTheme);
+$("#historyBtn").addEventListener("click", openMatchHistoryList);
 $("#soundToggle").addEventListener("click", ()=>{
   setSound(!soundOn);
   toast(soundOn ? "Sound on" : "Sound off");
